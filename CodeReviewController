@@ -1,0 +1,108 @@
+package com.jd.manage.codereveiw.controller;
+
+import cn.stylefeng.roses.core.base.controller.BaseController;
+import com.alibaba.fastjson.JSONObject;
+import com.jd.common.web.LoginContext;
+import com.jd.fastjson.JSON;
+import com.jd.manage.codereveiw.params.ProjectsIdRepositoryFilePathParams;
+import com.jd.manage.codereveiw.util.HttpUtilCodeReview;
+import com.jd.manage.codereveiw.util.HttpUtilGPT;
+import com.jd.manage.modular.system.VO.Result;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import javax.annotation.Resource;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import java.io.UnsupportedEncodingException;
+import java.net.URISyntaxException;
+import java.util.*;
+
+
+@Controller
+@RequestMapping("api/code")
+public class CodeReviewController extends BaseController {
+    private final static Logger logger = LoggerFactory.getLogger(CodeReviewController.class);
+
+    @Resource
+    HttpUtilCodeReview httpUtilCodeReview;
+
+    @RequestMapping("/projectslist")
+    @ResponseBody
+    public Result getProjects(@RequestParam(value = "body") String body, HttpServletRequest httpServletRequest) throws URISyntaxException, UnsupportedEncodingException {
+        return Result.success(httpUtilCodeReview.getProjects(httpServletRequest));
+    }
+
+    @RequestMapping("/projectid")
+    @ResponseBody
+    public Result getProjectsId(@RequestParam(value = "body") String body, HttpServletRequest httpServletRequest) throws URISyntaxException, UnsupportedEncodingException {
+        JSONObject obj = (JSONObject) JSONObject.parse(body);
+        return Result.success(httpUtilCodeReview.getProjectsId(httpServletRequest, obj.getString("id")));
+    }
+
+    @RequestMapping("/repositoryBranches")
+    @ResponseBody
+    public Result getProjectsIdRepositoryBranches(@RequestParam(value = "body") String body, HttpServletRequest httpServletRequest) throws URISyntaxException, UnsupportedEncodingException {
+        JSONObject obj = (JSONObject) JSONObject.parse(body);
+        return Result.success(httpUtilCodeReview.getProjectsIdRepositoryBranches(httpServletRequest, obj.getString("id")));
+    }
+
+    @RequestMapping("/repositoryCommit")
+    @ResponseBody
+    public Result getProjectsIdRepositoryCommit(@RequestParam(value = "body") String body, HttpServletRequest httpServletRequest) throws URISyntaxException, UnsupportedEncodingException {
+        JSONObject obj = (JSONObject) JSONObject.parse(body);
+        return Result.success(httpUtilCodeReview.getProjectsIdRepositoryCommit(httpServletRequest, obj.getString("id"), obj.getString("ref_name")));
+    }
+
+    @RequestMapping("/repositoryCompare")
+    @ResponseBody
+    public Result getProjectsIdRepositoryCompare(@RequestParam(value = "body") String body, HttpServletRequest httpServletRequest) throws URISyntaxException, UnsupportedEncodingException {
+        JSONObject obj = (JSONObject) JSONObject.parse(body);
+        return Result.success(httpUtilCodeReview.getProjectsIdRepositoryCompare(httpServletRequest, obj.getString("id"), obj.getString("from"), obj.getString("to")));
+    }
+
+    @RequestMapping("/repositoryFilePath")
+    @ResponseBody
+    public Result getProjectsIdRepositoryFilePath(@RequestParam(value = "body") String body, HttpServletRequest httpServletRequest) throws URISyntaxException, UnsupportedEncodingException {
+        JSONObject obj = (JSONObject) JSONObject.parse(body);
+        String result = httpUtilCodeReview.getProjectsIdRepositoryFilePath(httpServletRequest, obj.getString("id"), obj.getString("path"), obj.getString("ref"));
+        ProjectsIdRepositoryFilePathParams params = JSONObject.parseObject(result, ProjectsIdRepositoryFilePathParams.class);
+        byte[] byteArray = Base64.getDecoder().decode(params.getContent());
+        String decodedString = new String(byteArray);
+//        String jsonStr = "{\"erp\":\"lijianshuang\",\"messages\":[{\"content\":\"你是一名高级架构师，请分析这段代码是否存在问题，是否建议提交" + decodedString + "\",\"role\":\"user\"}],\"model\":\"gpt-35-turbo-1106\"}";
+        Map<String, Object> map = new HashMap<>();
+        map.put("erp", LoginContext.getLoginContext().getPin());
+        map.put("model", "gpt-35-turbo-1106");
+        List<Map<String, String>> list = new LinkedList<>();
+        Map<String, String> subMap = new HashMap<>();
+        subMap.put("content", "你是一名高级架构师，请分析这段代码是否存在问题，是否建议提交"+decodedString);
+        subMap.put("role", "user");
+        list.add(subMap);
+        map.put("messages", list);
+        return Result.success(HttpUtilGPT.postGPT(JSON.toJSONString(map)));
+    }
+//
+//    @RequestMapping("/repositoryFilePath")
+//    @ResponseBody
+//    public Result postGPT(@RequestParam(value = "body") String body) throws URISyntaxException, UnsupportedEncodingException {
+//        String result = httpUtilCodeReview.getProjectsIdRepositoryFilePath("505010", "src/main/java/com/jd/manage/core/exception/RRExceptionHandler.java");
+//        ProjectsIdRepositoryFilePathParams params = JSONObject.parseObject(result, ProjectsIdRepositoryFilePathParams.class);
+//        byte[] byteArray = Base64.getDecoder().decode(params.getContent());
+//        String decodedString = new String(byteArray);
+//        String jsonStr = "{\"erp\":\"lijianshuang\",\"messages\":[{\"content\":\"你是一名高级架构师，请分析这段代码是否存在问题，是否建议提交" + decodedString + "\",\"role\":\"user\"}],\"model\":\"gpt-3.5-turbo\"}";
+//        String result1 = HttpUtilGPT.postGPT(jsonStr);
+//        return Result.success(HttpUtilGPT.postGPT(result1));
+//    }
+}
+
+
+
+
+
+
+
+
